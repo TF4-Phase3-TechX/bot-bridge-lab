@@ -1,6 +1,7 @@
 {
   "scenario": "one private GitHub repository with automatic App authentication",
   "developer": "vinh-xbrainn",
-  "round": 1,
-  "workingBranch": "feature/single-repo-helper"
+  "round": 2,
+  "workingBranch": "main-local-only",
+  "autoCreateContributionBranch": true
 }
