@@ -1,0 +1,52 @@
+name: Bridge A to B
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bridge-a-to-b
+  cancel-in-progress: false
+
+jobs:
+  bridge:
+    if: github.repository == 'Vihnnnn/bot-bridge-lab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create destination App token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        id: app
+        with:
+          client-id: ${{ vars.BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BRIDGE_APP_PRIVATE_KEY }}
+          owner: TF4-Phase3-TechX
+          repositories: bot-bridge-lab
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Transfer original commits and verify identity
+        env:
+          BRIDGE_APP_TOKEN: ${{ steps.app.outputs.token }}
+          SOURCE_READ_TOKEN: ${{ github.token }}
+        run: node scripts/bridge-actions.mjs
+
+      - name: Save verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bridge-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: bridge-evidence/result.json
+          if-no-files-found: error
+          retention-days: 7
