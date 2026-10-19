@@ -1,6 +1,7 @@
 {
   "scenario": "private cross-org Actions bridge",
-  "round": 1,
+  "round": 2,
   "developer": "vinh-xbrainn",
-  "preserveOriginalCommits": true
+  "preserveOriginalCommits": true,
+  "retryVerified": true
 }
