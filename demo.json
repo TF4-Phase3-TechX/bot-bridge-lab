@@ -1,5 +1,7 @@
 {
   "project": "bot-bridge-lab",
-  "version": 0,
-  "features": []
+  "version": 1,
+  "features": [
+    "author-preserving-transfer"
+  ]
 }
