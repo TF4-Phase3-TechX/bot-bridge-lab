@@ -1,7 +1,8 @@
 {
   "project": "bot-bridge-lab",
-  "version": 1,
+  "version": 2,
   "features": [
-    "author-preserving-transfer"
+    "author-preserving-transfer",
+    "repeatable-handoff"
   ]
 }
