@@ -3,5 +3,6 @@
   "developer": "vinh-xbrainn",
   "round": 2,
   "workingBranch": "main-local-only",
-  "autoCreateContributionBranch": true
+  "autoCreateContributionBranch": true,
+  "updatedWithPlainGitPush": true
 }
