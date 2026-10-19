@@ -1,0 +1,1 @@
+﻿Case 2: clone B, commit locally, push and open a PR with GitHub App.
