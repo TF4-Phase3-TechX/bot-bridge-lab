@@ -1,1 +1,2 @@
 Case 1: A proposes a PR; B approves and merges; the bot syncs accepted history back to A.
+Revision 2: this update must reach the same B pull request before approval.
