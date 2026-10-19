@@ -1,0 +1,1 @@
+Case 1: A proposes a PR; B approves and merges; the bot syncs accepted history back to A.
