@@ -1,0 +1,15 @@
+name: Bridge policy checks
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - run: node --check scripts/pr-bridge.mjs
+      - run: node --test tests/pr-bridge-policy.test.mjs
