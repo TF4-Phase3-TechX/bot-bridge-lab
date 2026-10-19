@@ -1,0 +1,6 @@
+{
+  "scenario": "one private GitHub repository with automatic App authentication",
+  "developer": "vinh-xbrainn",
+  "round": 1,
+  "workingBranch": "feature/single-repo-helper"
+}
