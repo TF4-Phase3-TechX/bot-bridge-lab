@@ -1,0 +1,2 @@
+B decides merge. Contribution notifications run on events at A and B.
+A developers pull only A after the controller synchronizes accepted B history.
