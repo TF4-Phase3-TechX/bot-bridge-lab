@@ -1,0 +1,1 @@
+B decides merge. Contribution notifications run on events at A and B.
