@@ -1,2 +1,2 @@
 Contribution awaiting B review.
-Sync behavior: TODO.
+Sync behavior: B decides to merge; the bot synchronizes A/main from B/main; developers pull only from repository A.
