@@ -1,0 +1,2 @@
+A proposes code. B decides whether to merge. The isolated controller syncs accepted B history to A.
+Members of A pull only from repository A.
