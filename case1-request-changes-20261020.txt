@@ -1,2 +1,2 @@
-Contribution includes the developer detail from A.
+Contribution follows the updated policy from B and includes the developer detail from A.
 Sync behavior: B decides to merge; the bot synchronizes A/main from B/main; developers pull only from repository A.
