@@ -1,5 +1,6 @@
 name: Notify contribution bridge
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('Submit A PR #{0} at {1}', inputs.pr_number, inputs.head_sha) || format('Reconcile B {0}', github.event_name) }}
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && format('Submit A PR #{0} at {1}', inputs.pr_number, inputs.head_sha) || format('Reconcile B {0}', github.event_name) }}
 on:
   workflow_dispatch:
     inputs:
