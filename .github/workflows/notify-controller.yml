@@ -1,20 +1,41 @@
-name: Notify controller on B main update
+name: Notify controller on contribution events
 on:
   push:
     branches: [main]
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed, ready_for_review, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request_review_comment:
+    types: [created, edited]
 
 permissions: {}
 
 concurrency:
-  group: notify-b-main
+  group: notify-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number || 'main' }}
   cancel-in-progress: false
 
 jobs:
   notify:
-    if: github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.repository == 'Vihnnnn/bot-bridge-lab' || github.repository == 'TF4-Phase3-TechX/bot-bridge-lab') &&
+      (
+        (github.event_name == 'push' && github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && github.ref == 'refs/heads/main') ||
+        (github.event.sender.type == 'User' &&
+          (
+            (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+            ((github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') &&
+              github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository)
+          )
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # No checkout, PR code, dependencies, or interpolated comment text in this job.
       - name: Token scoped only to controller Actions
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
         id: dispatch
@@ -27,13 +48,19 @@ jobs:
       - name: Dispatch trusted controller main
         env:
           DISPATCH_TOKEN: ${{ steps.dispatch.outputs.token }}
+          SOURCE_REPO: ${{ github.repository }}
           SOURCE_SHA: ${{ github.sha }}
           SOURCE_RUN_ID: ${{ github.run_id }}
+          SOURCE_EVENT: ${{ github.event_name }}
+          SOURCE_PR: ${{ github.event.pull_request.number || github.event.issue.number || '' }}
         run: |
           node --input-type=module <<'NODE'
           import { appendFileSync } from 'node:fs';
-          const sha = process.env.SOURCE_SHA, runId = process.env.SOURCE_RUN_ID;
-          if (!/^[a-f0-9]{40}$/.test(sha) || !/^\d+$/.test(runId)) throw new Error('Invalid source event');
+          const { SOURCE_REPO: repo, SOURCE_SHA: sha, SOURCE_RUN_ID: runId, SOURCE_EVENT: event, SOURCE_PR: pr } = process.env;
+          if (!['Vihnnnn/bot-bridge-lab', 'TF4-Phase3-TechX/bot-bridge-lab'].includes(repo)
+            || !/^[a-f0-9]{40}$/.test(sha) || !/^[1-9][0-9]*$/.test(runId)
+            || !['push','pull_request_target','issue_comment','pull_request_review','pull_request_review_comment'].includes(event)
+            || (event === 'push' ? repo !== 'TF4-Phase3-TechX/bot-bridge-lab' || Boolean(pr) : !/^[1-9][0-9]*$/.test(pr))) throw new Error('Invalid source event');
           const response = await fetch('https://api.github.com/repos/TF4-Phase3-TechX/bot-bridge-controller/actions/workflows/controller.yml/dispatches', {
             method: 'POST',
             headers: {
@@ -43,12 +70,10 @@ jobs:
               'X-GitHub-Api-Version': '2022-11-28',
             },
             body: JSON.stringify({ ref: 'main', inputs: {
-              source_repo: 'TF4-Phase3-TechX/bot-bridge-lab',
-              source_sha: sha,
-              source_run_id: runId,
+              source_repo: repo, source_sha: sha, source_run_id: runId, source_event: event, source_pr: pr,
             } }),
             signal: AbortSignal.timeout(30000),
           });
           if (!response.ok) throw new Error(`Controller dispatch failed: HTTP ${response.status}`);
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `# B/main update dispatched\n\nB commit: \`${sha}\`\n\nController: TF4-Phase3-TechX/bot-bridge-controller / controller.yml / main\n\nSource run: https://github.com/TF4-Phase3-TechX/bot-bridge-lab/actions/runs/${runId}\n\nDispatch accepted: HTTP ${response.status}. Controller execution is queued separately; inspect its run for the reconciliation result.\n`);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `# Contribution event dispatched\n\nSource: ${repo} / ${event}${pr ? ` / PR #${pr}` : ''}\n\nEvent SHA: \`${sha}\`\n\nController: TF4-Phase3-TechX/bot-bridge-controller / controller.yml / main\n\nSource run: https://github.com/${repo}/actions/runs/${runId}\n\nDispatch accepted: HTTP ${response.status}. Inspect the controller run for the reconciliation result.\n`);
           NODE
