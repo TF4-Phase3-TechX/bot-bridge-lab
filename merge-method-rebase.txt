@@ -1,1 +1,2 @@
 Merge method: rebase
+B decides merge; A receives the accepted result and its PR closes.
