@@ -1,17 +1,5 @@
-name: Notify contribution bridge
-run-name: >-
-  ${{ github.event_name == 'workflow_dispatch' && format('Submit A PR #{0} at {1}', inputs.pr_number, inputs.head_sha) || format('Reconcile B {0}', github.event_name) }}
+name: Notify controller on contribution events
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: Open PR number at A
-        required: true
-        type: string
-      head_sha:
-        description: Exact 40-character head SHA of that PR (new commits require another submission)
-        required: true
-        type: string
   push:
     branches: [main]
   pull_request_target:
@@ -27,47 +15,26 @@ on:
 permissions: {}
 
 concurrency:
-  group: notify-${{ github.event_name }}-${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number || 'base' }}
+  group: notify-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number || 'main' }}
   cancel-in-progress: false
 
 jobs:
   notify:
     if: >-
-      (github.repository == 'Vihnnnn/bot-bridge-lab' && github.event_name == 'workflow_dispatch' &&
-        github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.run_attempt == 1) ||
-      (github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' &&
-        ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-         (github.event.sender.type == 'User' &&
-          ((github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
-           ((github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') &&
-            github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository)))))
-    permissions:
-      contents: read
-      pull-requests: read
+      (github.repository == 'Vihnnnn/bot-bridge-lab' || github.repository == 'TF4-Phase3-TechX/bot-bridge-lab') &&
+      (
+        (github.event_name == 'push' && github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && github.ref == 'refs/heads/main') ||
+        (github.event.sender.type == 'User' &&
+          (
+            (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+            ((github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') &&
+              github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository)
+          )
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Validate exact manual revision before creating the dispatch token
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_REPO: ${{ github.repository }}
-          SOURCE_PR: ${{ inputs.pr_number }}
-          SOURCE_SHA: ${{ inputs.head_sha }}
-        run: |
-          node --input-type=module <<'NODE'
-          const { SOURCE_REPO: repo, SOURCE_PR: pr, SOURCE_SHA: sha } = process.env;
-          if (repo !== 'Vihnnnn/bot-bridge-lab' || !/^[1-9][0-9]*$/.test(pr) || !/^[a-f0-9]{40}$/.test(sha)) throw new Error('Invalid PR/SHA');
-          const response = await fetch(`https://api.github.com/repos/${repo}/pulls/${pr}`, {
-            headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json' },
-            signal: AbortSignal.timeout(30000),
-          });
-          if (!response.ok) throw new Error(`Cannot read source PR: HTTP ${response.status}`);
-          const p = await response.json();
-          if (p.state !== 'open' || p.draft || p.base.ref !== 'main' || p.head.repo?.full_name !== repo || p.head.sha !== sha) {
-            throw new Error('PR must be open, ready, in this repository, and still at the exact submitted SHA');
-          }
-          NODE
       # No checkout, PR code, dependencies, or interpolated comment text in this job.
       - name: Token scoped only to controller Actions
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
@@ -82,20 +49,18 @@ jobs:
         env:
           DISPATCH_TOKEN: ${{ steps.dispatch.outputs.token }}
           SOURCE_REPO: ${{ github.repository }}
-          SOURCE_SHA: ${{ inputs.head_sha || github.sha }}
+          SOURCE_SHA: ${{ github.sha }}
           SOURCE_RUN_ID: ${{ github.run_id }}
           SOURCE_EVENT: ${{ github.event_name }}
-          SOURCE_PR: ${{ inputs.pr_number || github.event.pull_request.number || github.event.issue.number || '' }}
+          SOURCE_PR: ${{ github.event.pull_request.number || github.event.issue.number || '' }}
         run: |
           node --input-type=module <<'NODE'
           import { appendFileSync } from 'node:fs';
           const { SOURCE_REPO: repo, SOURCE_SHA: sha, SOURCE_RUN_ID: runId, SOURCE_EVENT: event, SOURCE_PR: pr } = process.env;
           if (!['Vihnnnn/bot-bridge-lab', 'TF4-Phase3-TechX/bot-bridge-lab'].includes(repo)
             || !/^[a-f0-9]{40}$/.test(sha) || !/^[1-9][0-9]*$/.test(runId)
-            || !['workflow_dispatch','push','pull_request_target','issue_comment','pull_request_review','pull_request_review_comment'].includes(event)
+            || !['push','pull_request_target','issue_comment','pull_request_review','pull_request_review_comment'].includes(event)
             || (event === 'push' ? repo !== 'TF4-Phase3-TechX/bot-bridge-lab' || Boolean(pr) : !/^[1-9][0-9]*$/.test(pr))) throw new Error('Invalid source event');
-          if (repo === 'Vihnnnn/bot-bridge-lab' && event !== 'workflow_dispatch') throw new Error('A code submission is manual only');
-          if (repo === 'TF4-Phase3-TechX/bot-bridge-lab' && event === 'workflow_dispatch') throw new Error('B only sends reconciliation events');
           const response = await fetch('https://api.github.com/repos/TF4-Phase3-TechX/bot-bridge-controller/actions/workflows/controller.yml/dispatches', {
             method: 'POST',
             headers: {
