@@ -1,0 +1,54 @@
+name: Notify controller on B main update
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: notify-b-main
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Token scoped only to controller Actions
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        id: dispatch
+        with:
+          client-id: ${{ vars.CONTROLLER_DISPATCH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CONTROLLER_DISPATCH_APP_PRIVATE_KEY }}
+          owner: TF4-Phase3-TechX
+          repositories: bot-bridge-controller
+          permission-actions: write
+      - name: Dispatch trusted controller main
+        env:
+          DISPATCH_TOKEN: ${{ steps.dispatch.outputs.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_RUN_ID: ${{ github.run_id }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          const sha = process.env.SOURCE_SHA, runId = process.env.SOURCE_RUN_ID;
+          if (!/^[a-f0-9]{40}$/.test(sha) || !/^\d+$/.test(runId)) throw new Error('Invalid source event');
+          const response = await fetch('https://api.github.com/repos/TF4-Phase3-TechX/bot-bridge-controller/actions/workflows/controller.yml/dispatches', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.DISPATCH_TOKEN}`,
+              Accept: 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+            body: JSON.stringify({ ref: 'main', inputs: {
+              source_repo: 'TF4-Phase3-TechX/bot-bridge-lab',
+              source_sha: sha,
+              source_run_id: runId,
+            } }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (!response.ok) throw new Error(`Controller dispatch failed: HTTP ${response.status}`);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `# B/main update dispatched\n\nB commit: \`${sha}\`\n\nController: TF4-Phase3-TechX/bot-bridge-controller / controller.yml / main\n\nSource run: https://github.com/TF4-Phase3-TechX/bot-bridge-lab/actions/runs/${runId}\n\nDispatch accepted: HTTP ${response.status}. Controller execution is queued separately; inspect its run for the reconciliation result.\n`);
+          NODE
