@@ -1,1 +1,2 @@
 Merge method: squash
+B decides merge; A receives the accepted result and its PR closes.
