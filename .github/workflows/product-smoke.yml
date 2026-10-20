@@ -1,0 +1,12 @@
+name: Product smoke (B only)
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  smoke:
+    if: github.repository == 'TF4-Phase3-TechX/bot-bridge-lab'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Product CI fixture runs only in B"

@@ -6,6 +6,7 @@ permissions:
   contents: read
 jobs:
   policy:
+    if: github.repository == 'TF4-Phase3-TechX/bot-bridge-lab'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
