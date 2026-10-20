@@ -1,2 +1,3 @@
 Decision owner: TODO.
 Main sync: TODO.
+Review communication: mirrored comments between paired PRs.
