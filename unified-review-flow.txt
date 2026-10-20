@@ -1,3 +1,3 @@
-Decision owner: TODO.
-Main sync: TODO.
+Decision owner: B maintainer.
+Main sync: the bot fast-forwards A/main from accepted B/main; developers pull only A.
 Review communication: mirrored comments between paired PRs.
