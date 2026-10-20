@@ -1,1 +1,1 @@
-A contribution revision 2
+A contribution revision 3 verifies same-run incoming mirror
