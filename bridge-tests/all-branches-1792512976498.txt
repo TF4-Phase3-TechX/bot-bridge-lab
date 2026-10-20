@@ -1,1 +1,1 @@
-Authoritative B branch revision 1
+Authoritative B fast-forward revision 2
