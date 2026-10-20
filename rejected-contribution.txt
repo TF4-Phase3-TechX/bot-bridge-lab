@@ -1,0 +1,1 @@
+Proposal: automatically merge contributions without B maintainer approval.
