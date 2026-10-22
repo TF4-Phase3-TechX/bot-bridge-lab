@@ -6,11 +6,11 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, closed, ready_for_review, edited]
   issue_comment:
-    types: [created, edited]
+    types: [created, edited, deleted]
   pull_request_review:
     types: [submitted, edited, dismissed]
   pull_request_review_comment:
-    types: [created, edited]
+    types: [created, edited, deleted]
 
 permissions: {}
 
