@@ -24,18 +24,25 @@ jobs:
     if: >-
       (github.repository == 'Vihnnnn/bot-bridge-lab' || github.repository == 'TF4-Phase3-TechX/bot-bridge-lab') &&
       (
-        (github.event_name == 'push' && github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && startsWith(github.ref, 'refs/heads/')) ||
+        (github.event_name == 'push' && github.repository == 'TF4-Phase3-TechX/bot-bridge-lab' && startsWith(github.ref, 'refs/heads/') &&
+          github.event.sender.login != 'techx-vihnnnn-bridge-lab[bot]') ||
         (github.event.sender.type == 'User' &&
           (
             (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
             ((github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') &&
-              github.event.pull_request.base.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+              github.event.pull_request.base.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository &&
+              (github.repository == 'Vihnnnn/bot-bridge-lab' ||
+                (startsWith(github.event.pull_request.head.ref, 'incoming/a-pr-') &&
+                 github.event.pull_request.user.login == 'techx-vihnnnn-bridge-lab[bot]')))
           )
         )
       )
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
       - name: Allow only dev PR events or TechX branch pushes
         id: scope
         env:
@@ -58,10 +65,12 @@ jobs:
             });
             if (!response.ok) throw new Error(`Cannot check current PR target: HTTP ${response.status}`);
             const pr = await response.json();
-            allowed = pr.base.ref === 'dev' && pr.head.repo?.full_name === repo;
+            allowed = pr.base.ref === 'dev' && pr.head.repo?.full_name === repo
+              && (repo !== 'TF4-Phase3-TechX/bot-bridge-lab'
+                || (/^incoming\/a-pr-[1-9][0-9]*$/.test(pr.head.ref) && pr.user?.login === 'techx-vihnnnn-bridge-lab[bot]'));
           }
           appendFileSync(process.env.GITHUB_OUTPUT, `allowed=${allowed}\n`);
-          if (!allowed) console.log('No dispatch: PR must target dev and have a head in this repository.');
+          if (!allowed) console.log('No dispatch: PR must target dev, have a head in this repository and, in TechX, be a bridge PR (incoming/a-pr-N).');
           NODE
       # No checkout, PR code, dependencies, or interpolated comment text in this job.
       - name: Token scoped only to controller Actions
